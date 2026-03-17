@@ -1,0 +1,19 @@
+{
+  "name": "ramble-vault",
+  "version": "0.1.0",
+  "description": "Connect Ramble On voice notes to Claude Code",
+  "bin": {
+    "ramble-vault": "bin/cli.js"
+  },
+  "keywords": [
+    "claude-code",
+    "voice-notes",
+    "ramble-on",
+    "transcription"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arnabing/ramble-vault"
+  }
+}
