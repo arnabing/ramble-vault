@@ -1,6 +1,6 @@
 {
   "name": "ramble-vault",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Connect Ramble On voice notes to Claude Code",
   "bin": {
     "ramble-vault": "bin/cli.js"

@@ -4,6 +4,8 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
+const readline = require("readline");
+
 const ICLOUD_BASE = path.join(
   os.homedir(),
   "Library/Mobile Documents/com~apple~CloudDocs"
@@ -113,8 +115,50 @@ function installSkills() {
   return installed;
 }
 
+// Prompt user for yes/no
+function ask(question) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.question(`  ${question} `, (answer) => {
+      rl.close();
+      const a = answer.trim().toLowerCase();
+      resolve(a === "" || a === "y" || a === "yes");
+    });
+  });
+}
+
+// Set up Obsidian vault in the given directory
+function setupObsidian(vaultPath) {
+  const obsidianDir = path.join(vaultPath, ".obsidian");
+  fs.mkdirSync(obsidianDir, { recursive: true });
+
+  // Sane defaults for viewing Ramble On notes
+  const appConfig = {
+    showFrontmatter: true,
+    readableLineLength: true,
+    showLineNumber: false,
+    strictLineBreaks: false,
+  };
+  fs.writeFileSync(
+    path.join(obsidianDir, "app.json"),
+    JSON.stringify(appConfig, null, 2) + "\n"
+  );
+
+  // Recommend Dataview for querying frontmatter
+  const communityPlugins = ["dataview"];
+  fs.writeFileSync(
+    path.join(obsidianDir, "community-plugins.json"),
+    JSON.stringify(communityPlugins, null, 2) + "\n"
+  );
+
+  return true;
+}
+
 // Main
-function main() {
+async function main() {
   console.log();
   console.log("  \x1b[1mRamble On → Claude Code\x1b[0m");
   console.log();
@@ -150,14 +194,32 @@ function main() {
   const skills = installSkills();
   success(`Installed skills: ${skills.map((s) => `/${s}`).join(", ")}`);
 
+  // Step 4: Obsidian setup
+  console.log();
+  const wantObsidian = await ask("Set up as Obsidian vault? (Y/n)");
+
+  if (wantObsidian) {
+    setupObsidian(vaultPath);
+    success("Created .obsidian/ config");
+  }
+
   // Done
   console.log();
-  console.log("  \x1b[1m\x1b[32mDone!\x1b[0m Open Claude Code and try:");
+  console.log("  \x1b[1m\x1b[32mDone!\x1b[0m");
   console.log();
+  console.log("  \x1b[4mClaude Code:\x1b[0m");
   console.log("    \x1b[36m/recall\x1b[0m what did I talk about this week?");
   console.log("    \x1b[36m/ideas\x1b[0m");
   console.log("    \x1b[36m/trace\x1b[0m pricing strategy");
+  if (wantObsidian) {
+    console.log();
+    console.log("  \x1b[4mObsidian:\x1b[0m");
+    console.log(`    Open folder as vault → select ${vaultPath}`);
+  }
   console.log();
 }
 
-main();
+main().catch((err) => {
+  error(err.message);
+  process.exit(1);
+});
