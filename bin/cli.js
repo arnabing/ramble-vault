@@ -6,6 +6,10 @@ const os = require("os");
 
 const readline = require("readline");
 
+const ICLOUD_CONTAINER = path.join(
+  os.homedir(),
+  "Library/Mobile Documents/iCloud~com~mididea/Documents"
+);
 const ICLOUD_BASE = path.join(
   os.homedir(),
   "Library/Mobile Documents/com~apple~CloudDocs"
@@ -28,6 +32,22 @@ function error(msg) {
 
 // Find the Ramble On vault in iCloud Drive
 function findVault() {
+  // Check iCloud container first (auto-sync from iOS app)
+  if (fs.existsSync(ICLOUD_CONTAINER)) {
+    const claudeMd = path.join(ICLOUD_CONTAINER, "CLAUDE.md");
+    if (fs.existsSync(claudeMd)) {
+      return ICLOUD_CONTAINER;
+    }
+    // Container exists but no CLAUDE.md yet — still use it if it has .md files
+    try {
+      const files = fs.readdirSync(ICLOUD_CONTAINER);
+      if (files.some((f) => f.endsWith(".md"))) {
+        return ICLOUD_CONTAINER;
+      }
+    } catch {}
+  }
+
+  // Fallback: search iCloud Drive (legacy folder picker path)
   if (!fs.existsSync(ICLOUD_BASE)) {
     return null;
   }
@@ -102,14 +122,20 @@ function installSkills() {
   fs.mkdirSync(SKILLS_DIR, { recursive: true });
 
   const skillsSource = path.join(__dirname, "..", "skills");
-  const files = fs.readdirSync(skillsSource).filter((f) => f.endsWith(".md"));
+  const dirs = fs
+    .readdirSync(skillsSource, { withFileTypes: true })
+    .filter((d) => d.isDirectory());
   const installed = [];
 
-  for (const file of files) {
-    const src = path.join(skillsSource, file);
-    const dest = path.join(SKILLS_DIR, file);
-    fs.copyFileSync(src, dest);
-    installed.push(file.replace(".md", ""));
+  for (const dir of dirs) {
+    const destDir = path.join(SKILLS_DIR, dir.name);
+    fs.mkdirSync(destDir, { recursive: true });
+    const src = path.join(skillsSource, dir.name, "SKILL.md");
+    const dest = path.join(destDir, "SKILL.md");
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, dest);
+      installed.push(dir.name);
+    }
   }
 
   return installed;
@@ -208,9 +234,9 @@ async function main() {
   console.log("  \x1b[1m\x1b[32mDone!\x1b[0m");
   console.log();
   console.log("  \x1b[4mClaude Code:\x1b[0m");
-  console.log("    \x1b[36m/recall\x1b[0m what did I talk about this week?");
-  console.log("    \x1b[36m/ideas\x1b[0m");
-  console.log("    \x1b[36m/trace\x1b[0m pricing strategy");
+  console.log("    \x1b[36m/ramble\x1b[0m what did I talk about this week?");
+  console.log("    \x1b[36m/ramble\x1b[0m ideas");
+  console.log("    \x1b[36m/ramble\x1b[0m trace pricing strategy");
   if (wantObsidian) {
     console.log();
     console.log("  \x1b[4mObsidian:\x1b[0m");
